@@ -214,40 +214,6 @@ public:
         size_ = new_size;
     }
 
-    template <typename... Args>
-    iterator AddWithReallocation(size_t distance_to_pos, Args&&... args) {
-        size_t new_size = (size_ == 0) ? 1 : 2 * size_;
-        RawMemory<T> new_data(new_size);
-        T* new_element_ptr = new (new_data + distance_to_pos) T{ std::forward<Args>(args)... };
-        if constexpr (IsTHaveMoveCon()) {
-            std::uninitialized_move_n(data_.GetAddress(), distance_to_pos, new_data.GetAddress());
-            std::uninitialized_move_n(data_ + distance_to_pos, size_ - distance_to_pos, new_data + distance_to_pos + 1);
-        }
-        else {
-            std::uninitialized_copy_n(data_.GetAddress(), distance_to_pos, new_data.GetAddress());
-            std::uninitialized_copy_n(data_ + distance_to_pos, size_ - distance_to_pos, new_data + distance_to_pos + 1);
-        }
-        DestroyN(data_.GetAddress(), size_);
-        data_.Swap(new_data);
-        return new_element_ptr;
-    }
-
-    template <typename... Args>
-    iterator AddWithoutReallocation(const_iterator pos, size_t distance_to_pos, Args&&... args) {
-        iterator new_element_ptr = nullptr;
-        if (pos == end()) {
-            new_element_ptr = new (data_ + distance_to_pos) T{ std::forward<Args>(args)... };
-        }
-        else {
-            new (end()) T{ std::forward <T>(*(end() - 1)) };
-            T temp{ std::forward<Args>(args)... };
-            std::move_backward(begin() + distance_to_pos, end() - 1, end());
-            data_[distance_to_pos] = std::move(temp);
-            new_element_ptr = &data_[distance_to_pos];
-        }
-        return new_element_ptr;
-    }
-
     template <typename... Args> 
     iterator Emplace(const_iterator pos, Args&&... args) { 
         size_t distance_to_pos = std::distance(cbegin(), pos); 
@@ -317,6 +283,40 @@ private:
 
     static void Destroy(T* buf) noexcept {
         buf->~T();
+    }
+
+    template <typename... Args>
+    iterator AddWithReallocation(size_t distance_to_pos, Args&&... args) {
+        size_t new_size = (size_ == 0) ? 1 : 2 * size_;
+        RawMemory<T> new_data(new_size);
+        T* new_element_ptr = new (new_data + distance_to_pos) T{ std::forward<Args>(args)... };
+        if constexpr (IsTHaveMoveCon()) {
+            std::uninitialized_move_n(data_.GetAddress(), distance_to_pos, new_data.GetAddress());
+            std::uninitialized_move_n(data_ + distance_to_pos, size_ - distance_to_pos, new_data + distance_to_pos + 1);
+        }
+        else {
+            std::uninitialized_copy_n(data_.GetAddress(), distance_to_pos, new_data.GetAddress());
+            std::uninitialized_copy_n(data_ + distance_to_pos, size_ - distance_to_pos, new_data + distance_to_pos + 1);
+        }
+        DestroyN(data_.GetAddress(), size_);
+        data_.Swap(new_data);
+        return new_element_ptr;
+    }
+
+    template <typename... Args>
+    iterator AddWithoutReallocation(const_iterator pos, size_t distance_to_pos, Args&&... args) {
+        iterator new_element_ptr = nullptr;
+        if (pos == end()) {
+            new_element_ptr = new (data_ + distance_to_pos) T{ std::forward<Args>(args)... };
+        }
+        else {
+            new (end()) T{ std::forward <T>(*(end() - 1)) };
+            T temp{ std::forward<Args>(args)... };
+            std::move_backward(begin() + distance_to_pos, end() - 1, end());
+            data_[distance_to_pos] = std::move(temp);
+            new_element_ptr = &data_[distance_to_pos];
+        }
+        return new_element_ptr;
     }
 
 };
