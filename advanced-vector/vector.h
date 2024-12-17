@@ -241,7 +241,6 @@ public:
         return *Emplace(cend(), std::forward<Args>(args)...);
     }
 
-    /*noexcept(std::is_nothrow_move_assignable_v<T>)*/
     iterator Erase(const_iterator pos) {
         size_t distance_to_pos = std::distance(cbegin(), pos);
         Destroy(data_ + distance_to_pos);
